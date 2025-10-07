@@ -5,7 +5,7 @@ Este diretório contém os scripts responsáveis por buscar, processar e armazen
 ## Pré-requisitos
 
 Antes de começar, garanta que você tenha os seguintes softwares instalados na sua máquina:
-* Python 3.9+
+* Python 3.12+
 * Docker
 * Docker Compose
 
@@ -19,7 +19,7 @@ Vamos configurar o ambiente passo a passo.
 
 ```bash
 # Crie o ambiente virtual na pasta raíz do projeto (scinewsAI/)
-python3 -m venv .venv
+python -m venv .venv
 
 # Ative o ambiente (Linux/macOS)
 source .venv/bin/activate
@@ -43,7 +43,7 @@ As credenciais do banco de dados são gerenciadas através de um arquivo `.env`.
 Primeiro, copie o arquivo de exemplo:
 
 ```bash
-pip .env.example .env
+cp .env.example .env
 ```
 
 Agora, abra o arquivo .env recém-criado e preencha as variáveis.
