@@ -10,33 +10,22 @@ from src.rag import query_rag
 def main():
     parser = argparse.ArgumentParser(description="AI Translator & Summarizer for Scientific Papers")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
-    
-    ingest_parser = subparsers.add_parser("ingest", help="Ingest a PDF paper")
-    ingest_parser.add_argument("file_path", help="Path to the PDF file")
-    query_parser = subparsers.add_parser("query", help="Ask a question or summarize")
-    query_parser.add_argument("question", help="The question or prompt")
-    
+    file_parser = subparsers.add_parser("file", help="File related commands")
+    file_parser.add_argument("file_path", help="Path to the PDF file")    
     args = parser.parse_args()
     
-    if args.command == "ingest":
+    if args.command == "file":
         try:
             result = ingest_paper(args.file_path)
             print(result)
-        except Exception as e:
-            print(f"Erro ao ler arquivo: {e}")
-            sys.exit(1)
-            
-    elif args.command == "query":
-        try:
             print("Processando consulta...")
-            answer = query_rag(args.question)
+            answer = query_rag()
             print("\n=== Resposta ===\n")
             print(answer)
             print("\n=============\n")
         except Exception as e:
-            print(f"Erro ao consultar: {e}")
+            print(f"Erro durante o processamento: {e}")
             sys.exit(1)
-            
     else:
         parser.print_help()
         sys.exit(1)

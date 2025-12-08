@@ -15,40 +15,55 @@ def get_vectorstore() -> Chroma:
 
 def get_retriever():
     vectorstore = get_vectorstore()
-    return vectorstore.as_retriever(search_kwargs={"k": 5})
+    return vectorstore.as_retriever(search_kwargs={"k": 7})
 
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-def get_rag_chain():
+
+def query_rag(query: str = "Provide a comprehensive summary of this research paper") -> str:
     llm = get_llm()
     retriever = get_retriever()
+
+    template = """You are an expert science communicator and translator. Your goal is to explain complex scientific concepts
+    from the provided research paper context in a clear, accessible, and friendly way to a general audience, while maintaining accuracy.
     
-    template = """You are an expert science communicator and translator. 
-Your goal is to explain complex scientific concepts from the provided research paper context in a clear, accessible, and friendly way to a general audience, while maintaining accuracy.
+    Analyse the provided context and generate a comprehensive summary structured into the following sections. Ensure each section is detailed yet easy to understand.
+    
+    Structure your response as follows:
+    
+    # Title & Overview
+    Give a catchy title and a brief high-level overview of what the paper is about.
+    
+    ## 1. Introduction & Problem Statement
+    - What is the context?
+    - What problem are the researchers trying to solve?
+    - Why is this important?
+    
+    ## 2. Methodology & Approach
+    - How did they approach the problem?
+    - What methods or experiments did they use? (Explain simply)
+    
+    ## 3. Key Results & Findings
+    - What did they find?
+    - Provide specific interesting data points or discoveries.
+    
+    ## 4. Conclusion & Implications
+    - What do these results mean?
+    - How does this impact the field or the real world?
+    
+    Context:
+    {context}
 
-Use the following pieces of retrieved context to answer the user's question or summarize the paper.
-If you don't know the answer based on the context, just say that you don't know.
-
-Context:
-{context}
-
-Question:
-{question}
-
-Answer (in accessible, friendly, yet accurate language):"""
+    Answer (in accessible, friendly, yet accurate markdown):"""
 
     prompt = ChatPromptTemplate.from_template(template)
     
     rag_chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        {"context": retriever | format_docs, "query": RunnablePassthrough()}
         | prompt
         | llm
         | StrOutputParser()
     )
-    
-    return rag_chain
 
-def query_rag(question: str) -> str:
-    rag_chain = get_rag_chain()
-    return rag_chain.invoke(question)
+    return rag_chain.invoke(query)

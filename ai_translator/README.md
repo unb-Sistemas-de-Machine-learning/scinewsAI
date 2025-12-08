@@ -9,14 +9,8 @@ Para executar:
 docker compose build
 ```
 
-3. Insira o arquivo o arquivo no ChromaDB:
+3. Rode o container passando o diretório do arquivo como argumento:
 
 ```bash
-docker compose run app ingest data/arquivo.pdf
-```
-
-4. Envia uma pergunta ao RAG
-
-```bash
-docker compose run app query "summarize the main points of this articles"
+docker compose run app file data/arquivo.pdf
 ```
