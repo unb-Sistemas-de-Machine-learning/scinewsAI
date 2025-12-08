@@ -1,0 +1,9 @@
+services:
+  app:
+    build: ./ai_translator
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./data:/app/data
+    env_file:
+      - ./ai_translator/.env
+    command: ["--help"]
