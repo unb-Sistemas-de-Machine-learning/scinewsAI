@@ -2,6 +2,45 @@
 
 Este diretório contém os scripts responsáveis por buscar, processar e armazenar artigos científicos (atualmente focados no **Arxiv**) em um banco de dados PostgreSQL. O projeto foi refatorado para uma estrutura modular.
 
+## Métrica de Relevância (Scoring)
+
+Para garantir que o feed de artigos seja relevante, utilizamos um algoritmo de pontuação personalizado. O objetivo é equilibrar artigos novos de autores consolidados com descobertas de pesquisadores emergentes, evitando que autores "Superstars" monopolizem o ranking.
+
+A pontuação total ($S_{total}$) é calculada pela soma ponderada de três fatores:
+
+$$
+S_{total} = S_{paper} + S_{author} + S_{hindex}
+$$
+
+Onde a fórmula detalhada é:
+
+$$
+S_{total} = 10 \cdot \ln(C_{paper} + 1) + 5 \cdot \ln(C_{author\_max} + 1) + 0.5 \cdot H_{index\_max}
+$$
+
+### Componentes do Algoritmo:
+
+1.  **Citações do Artigo ($S_{paper}$)**
+    * **Peso:** 10 (Alto)
+    * **Lógica:** Utiliza escala logarítmica ($\ln$). Artigos novos geralmente têm 0 citações, mas se um artigo recente já possui citações, ele recebe um "boost" significativo, pois indica impacto imediato.
+
+2.  **Autoridade do Autor ($S_{author}$)**
+    * **Peso:** 5 (Médio)
+    * **Lógica:** Baseada no número de citações do autor mais citado do paper.
+    * **Por que Logarítmico?** Para "achatar" a curva. Um autor com 100.000 citações não é necessariamente 100x mais relevante para um paper novo do que um autor com 1.000 citações. O logaritmo diminui a distância entre o "Sênior" e o "Superstar", permitindo competição justa.
+
+3.  **H-Index ($S_{hindex}$)**
+    * **Peso:** 0.5 (Baixo/Linear)
+    * **Lógica:** Escala linear. O *H-Index* já é uma métrica difícil de subir (logarítmica por natureza). Uma diferença de 10 vs 50 no H-Index reflete uma disparidade real de consistência na carreira, por isso mantemos a progressão linear.
+
+> [!NOTE]
+> **O que é o H-Index?**
+> É uma métrica que representa o número de artigos ($h$) de um autor que receberam pelo menos o mesmo número ($h$) de citações.
+>
+> *Exemplo:* Um pesquisador com **H-Index 10** significa que ele publicou pelo menos **10 artigos** e *cada um deles* recebeu pelo menos **10 citações**.
+>
+> Isso ajuda nosso algoritmo a valorizar a **consistência** da carreira, evitando que um autor com apenas um único "artigo viral" (mas baixa produção geral) distorça o ranking.
+
 ## Estrutura do Projeto
 
 ```bash
