@@ -1,0 +1,214 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+/* SciNewsAI Design System - Clean & Academic */
+
+@layer base {
+  :root {
+    /* Primary palette - Deep scholarly navy */
+    --background: 45 30% 98%;
+    --foreground: 220 30% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 15%;
+
+    /* Primary - Deep navy blue */
+    --primary: 220 50% 25%;
+    --primary-foreground: 45 30% 98%;
+
+    /* Secondary - Warm cream/beige */
+    --secondary: 40 25% 92%;
+    --secondary-foreground: 220 30% 20%;
+
+    /* Muted - Soft gray with warmth */
+    --muted: 40 15% 93%;
+    --muted-foreground: 220 15% 45%;
+
+    /* Accent - Scholarly green */
+    --accent: 160 35% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 220 50% 25%;
+
+    --radius: 0.375rem;
+
+    /* Custom tokens */
+    --scholarly-gold: 40 60% 50%;
+    --scholarly-green: 160 35% 40%;
+    --paper-texture: 45 30% 96%;
+    --ink: 220 30% 15%;
+
+    /* Typography */
+    --font-serif: 'Playfair Display', Georgia, serif;
+    --font-sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* Shadows */
+    --shadow-card: 0 2px 8px -2px hsl(220 30% 15% / 0.08);
+    --shadow-elevated: 0 8px 24px -4px hsl(220 30% 15% / 0.12);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 25% 10%;
+    --foreground: 45 20% 95%;
+
+    --card: 220 25% 13%;
+    --card-foreground: 45 20% 95%;
+
+    --popover: 220 25% 13%;
+    --popover-foreground: 45 20% 95%;
+
+    --primary: 45 30% 85%;
+    --primary-foreground: 220 30% 12%;
+
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 45 20% 90%;
+
+    --muted: 220 20% 18%;
+    --muted-foreground: 45 15% 60%;
+
+    --accent: 160 40% 50%;
+    --accent-foreground: 220 25% 10%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 45 30% 85%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  .article-prose {
+    @apply leading-relaxed;
+    font-size: 1.0625rem;
+    line-height: 1.8;
+  }
+
+  .article-prose p {
+    @apply mb-4;
+  }
+
+  .scholarly-card {
+    @apply bg-card rounded-lg border border-border;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .scholarly-card:hover {
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-2px);
+  }
+
+  .nav-link {
+    @apply relative text-muted-foreground transition-colors hover:text-foreground;
+  }
+
+  .nav-link::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-0.5 bg-accent transition-all duration-300;
+  }
+
+  .nav-link:hover::after,
+  .nav-link.active::after {
+    @apply w-full;
+  }
+
+  .topic-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+           bg-secondary text-secondary-foreground border border-border
+           transition-all duration-200 hover:bg-accent hover:text-accent-foreground
+           cursor-pointer;
+  }
+
+  .topic-badge.subscribed {
+    @apply bg-accent text-accent-foreground border-accent;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+
+  .font-sans {
+    font-family: var(--font-sans);
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
