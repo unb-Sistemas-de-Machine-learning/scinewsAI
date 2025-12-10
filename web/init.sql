@@ -62,6 +62,19 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE INDEX idx_subscriptions_user ON subscriptions(user_id);
 CREATE INDEX idx_subscriptions_topic ON subscriptions(topic_id);
 
+-- Likes table (user-article relationship for likes/favorites)
+CREATE TABLE IF NOT EXISTS likes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, article_id)
+);
+
+CREATE INDEX idx_likes_user ON likes(user_id);
+CREATE INDEX idx_likes_article ON likes(article_id);
+CREATE INDEX idx_likes_created ON likes(created_at DESC);
+
 -- Insert default topics based on ArXiv CS Categories
 INSERT INTO topics (name, slug, description) VALUES
     ('Inteligência Artificial', 'artificial-intelligence', 'IA, sistemas inteligentes e raciocínio automático'),
@@ -105,7 +118,7 @@ INSERT INTO articles (id, title, authors, publication_date, abstract, keywords, 
      'Este artigo fornece uma revisão abrangente das arquiteturas transformer e sua evolução desde o artigo original "Attention Is All You Need". Analisamos os componentes-chave que tornam os transformers eficazes e discutimos avanços recentes em mecanismos de atenção eficientes.',
      ARRAY['transformers', 'atenção', 'aprendizado profundo', 'redes neurais'],
      'https://arxiv.org/abs/2401.00001',
-     'completed',
+     'translated',
      '## Sobre o que é este artigo?
 
 Este artigo analisa profundamente as **arquiteturas transformer** — a tecnologia por trás de sistemas modernos de IA como ChatGPT e BERT.
@@ -131,7 +144,7 @@ Antes dos transformers, os sistemas de IA processavam texto palavra por palavra.
      'Apresentamos uma nova abordagem para aprendizado federado que permite que múltiplas instituições de saúde treinem colaborativamente modelos de aprendizado de máquina sem compartilhar dados sensíveis de pacientes.',
      ARRAY['aprendizado federado', 'privacidade', 'saúde', 'aprendizado de máquina'],
      'https://arxiv.org/abs/2401.00002',
-     'completed',
+     'translated',
      '## Sobre o que é este artigo?
 
 Esta pesquisa introduz uma nova forma de treinar sistemas de IA em saúde mantendo os dados dos pacientes completamente privados através do **aprendizado federado**.

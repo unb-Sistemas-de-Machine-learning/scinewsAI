@@ -4,6 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { articlesApi } from '@/lib/apiService';
 import { Article as ArticleType } from '@/types';
 import { Button } from '@/components/ui/button';
+import { LikeButton } from '@/components/articles/LikeButton';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -143,6 +144,7 @@ export default function Article() {
           </div>
 
           <div className="flex flex-wrap gap-4">
+            <LikeButton articleId={article.id} size="md" />
             <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 className="h-4 w-4 mr-2" />
               Compartilhar

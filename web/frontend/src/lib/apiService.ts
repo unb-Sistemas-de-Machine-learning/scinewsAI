@@ -124,3 +124,29 @@ export const newsletterApi = {
     return response.data;
   },
 };
+
+export const likesApi = {
+  // Like an article
+  like: async (articleId: string) => {
+    const response = await api.post(`/api/articles/${articleId}/like/`);
+    return response.data;
+  },
+
+  // Unlike an article
+  unlike: async (articleId: string) => {
+    const response = await api.delete(`/api/articles/${articleId}/like/`);
+    return response.data;
+  },
+
+  // Get like status for an article
+  getStatus: async (articleId: string) => {
+    const response = await api.get(`/api/articles/${articleId}/like-status/`);
+    return response.data;
+  },
+
+  // Get public like count (no authentication required)
+  getCount: async (articleId: string) => {
+    const response = await api.get(`/api/articles/${articleId}/likes/`);
+    return response.data;
+  },
+};
