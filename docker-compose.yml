@@ -1,0 +1,52 @@
+services:
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: scinews
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d scinews"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: 
+      context: ./ai_translator
+      dockerfile: Dockerfile
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./data:/app/data
+    env_file:
+      - ./ai_translator/.env
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/scinews
+      - LLM_PROVIDER=openai
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["db", "--loop"]
+    restart: unless-stopped
+
+  scraper:
+    build:
+      context: ./paper_scraper
+      dockerfile: Dockerfile
+    environment:
+      - EXECUTION_MODE=auto
+      - RUN_ON_START=true
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=scinews
+      - DATABASE_URL=postgresql://user:password@db:5432/scinews
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
