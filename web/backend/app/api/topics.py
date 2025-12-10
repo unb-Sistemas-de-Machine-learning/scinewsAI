@@ -1,11 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
-from uuid import UUID
 
-from app.db.database import get_db
-from app.models.topic import Topic
-from app.models.subscription import Subscription
+from app.db.supabase import get_supabase
 from app.schemas.topic import TopicResponse
 from app.core.security import get_current_user
 
@@ -13,77 +9,86 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[TopicResponse])
-async def list_topics(
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
+async def list_topics(current_user: dict = Depends(get_current_user)):
     """List all available topics"""
-    topics = db.query(Topic).order_by(Topic.name).all()
-    return [TopicResponse.model_validate(t) for t in topics]
+    supabase = get_supabase()
+    
+    try:
+        result = supabase.table("topics").select("*").order("name").execute()
+        topics = result.data if result.data else []
+        return [TopicResponse.model_validate(t) for t in topics]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch topics: {str(e)}")
 
 
 @router.post("/{topic_id}/subscribe")
 async def subscribe_to_topic(
-    topic_id: UUID,
-    db: Session = Depends(get_db),
+    topic_id: str,
     current_user: dict = Depends(get_current_user),
 ):
     """Subscribe to a topic"""
-    topic = db.query(Topic).filter(Topic.id == topic_id).first()
-    if not topic:
-        raise HTTPException(status_code=404, detail="Topic not found")
+    supabase = get_supabase()
     
-    # Check if already subscribed
-    existing = db.query(Subscription).filter(
-        Subscription.user_id == current_user["user_id"],
-        Subscription.topic_id == topic_id
-    ).first()
-    
-    if existing:
-        raise HTTPException(status_code=400, detail="Already subscribed to this topic")
-    
-    subscription = Subscription(
-        user_id=current_user["user_id"],
-        topic_id=topic_id
-    )
-    db.add(subscription)
-    db.commit()
-    
-    return {"message": "Successfully subscribed", "topic": topic.name}
+    try:
+        # Check if topic exists
+        topic_result = supabase.table("topics").select("*").eq("id", topic_id).execute()
+        if not topic_result.data:
+            raise HTTPException(status_code=404, detail="Topic not found")
+        
+        topic = topic_result.data[0]
+        
+        # Check if already subscribed
+        existing = supabase.table("subscriptions").select("id").eq("user_id", current_user["user_id"]).eq("topic_id", topic_id).execute()
+        
+        if existing.data:
+            raise HTTPException(status_code=400, detail="Already subscribed to this topic")
+        
+        # Create subscription
+        supabase.table("subscriptions").insert({
+            "user_id": current_user["user_id"],
+            "topic_id": topic_id
+        }).execute()
+        
+        return {"message": "Successfully subscribed", "topic": topic.get("name")}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to subscribe: {str(e)}")
 
 
 @router.delete("/{topic_id}/unsubscribe")
 async def unsubscribe_from_topic(
-    topic_id: UUID,
-    db: Session = Depends(get_db),
+    topic_id: str,
     current_user: dict = Depends(get_current_user),
 ):
     """Unsubscribe from a topic"""
-    subscription = db.query(Subscription).filter(
-        Subscription.user_id == current_user["user_id"],
-        Subscription.topic_id == topic_id
-    ).first()
+    supabase = get_supabase()
     
-    if not subscription:
-        raise HTTPException(status_code=404, detail="Subscription not found")
-    
-    db.delete(subscription)
-    db.commit()
-    
-    return {"message": "Successfully unsubscribed"}
+    try:
+        supabase.table("subscriptions").delete().eq("user_id", current_user["user_id"]).eq("topic_id", topic_id).execute()
+        return {"message": "Successfully unsubscribed"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to unsubscribe: {str(e)}")
 
 
 @router.get("/subscriptions/", response_model=List[TopicResponse])
-async def get_user_subscriptions(
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
+async def get_user_subscriptions(current_user: dict = Depends(get_current_user)):
     """Get user's topic subscriptions"""
-    subscriptions = db.query(Subscription).filter(
-        Subscription.user_id == current_user["user_id"]
-    ).all()
+    supabase = get_supabase()
     
-    topic_ids = [sub.topic_id for sub in subscriptions]
-    topics = db.query(Topic).filter(Topic.id.in_(topic_ids)).all()
-    
-    return [TopicResponse.model_validate(t) for t in topics]
+    try:
+        # Get user's subscriptions
+        subscriptions = supabase.table("subscriptions").select("topic_id").eq("user_id", current_user["user_id"]).execute()
+        
+        if not subscriptions.data:
+            return []
+        
+        topic_ids = [sub["topic_id"] for sub in subscriptions.data]
+        
+        # Get topics
+        if topic_ids:
+            topics = supabase.table("topics").select("*").in_("id", topic_ids).execute()
+            return [TopicResponse.model_validate(t) for t in topics.data] if topics.data else []
+        return []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch subscriptions: {str(e)}")
