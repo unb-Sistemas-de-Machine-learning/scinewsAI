@@ -53,19 +53,8 @@ Text to process:
 Answer (in accessible, friendly, yet accurate markdown):"""
 
 def query_rag(query: str = "Provide a comprehensive summary of this research paper") -> str:
-    llm = get_llm()
-    retriever = get_retriever()
-    
-    prompt = ChatPromptTemplate.from_template(FINAL_PROMPT_TEMPLATE)
-    
-    rag_chain = (
-        {"context": retriever | format_docs, "query": RunnablePassthrough()}
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
-
-    return rag_chain.invoke(query)
+    result = query_rag_with_context(query=query)
+    return result["answer"]
 
 def translate_text(text: str) -> str:
     """
@@ -82,3 +71,27 @@ def translate_text(text: str) -> str:
     )
     
     return chain.invoke(text)
+
+
+def query_rag_with_context(query: str = "Provide a comprehensive summary of this research paper"):
+    """
+    Returns both the generated answer and the raw contexts used for retrieval.
+    """
+    llm = get_llm()
+    retriever = get_retriever()
+
+    prompt = ChatPromptTemplate.from_template(FINAL_PROMPT_TEMPLATE)
+
+    # Pull contexts explicitly to log later
+    docs = retriever.invoke(query)
+    contexts = [doc.page_content for doc in docs]
+
+    rag_chain = (
+        {"context": lambda _: "\n\n".join(contexts), "query": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    answer = rag_chain.invoke(query)
+    return {"answer": answer, "contexts": contexts}

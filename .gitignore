@@ -1,6 +1,11 @@
-.venv/
-venv/
+﻿.venv/
 __pycache__/
 articles_pdf/
-
+chroma_db/
+data/
+venv/
 .env
+mlflow/.env
+mlflow/mlflow.db
+mlflow/artifacts/
+mlruns/

@@ -1,4 +1,4 @@
-services:
+﻿services:
   db:
     image: postgres:15-alpine
     container_name: scinewsai-db
@@ -18,20 +18,25 @@ services:
       retries: 5
 
   app:
-    build: 
+    build:
       context: ./ai_translator
       dockerfile: Dockerfile
     volumes:
       - ./chroma_db:/app/chroma_db
       - ./data:/app/data
+    user: root
     env_file:
       - ./ai_translator/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/scinewsai
       - LLM_PROVIDER=openai
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - ANONYMIZED_TELEMETRY=False
     depends_on:
       db:
         condition: service_healthy
+      mlflow:
+        condition: service_started
     command: ["db", "--loop"]
     restart: unless-stopped
 
@@ -89,5 +94,36 @@ services:
     depends_on:
       - backend
 
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: scinewsai-mlflow
+    user: "0:0"
+    env_file:
+      - ./mlflow/.env
+    environment:
+      MLFLOW_BACKEND_STORE_URI: sqlite:////mlflow/mlflow.db
+      MLFLOW_ARTIFACTS_DESTINATION: /mlflow/artifacts
+      MLFLOW_HOST: 0.0.0.0
+      MLFLOW_PORT: 5000
+      MLFLOW_SERVER_ALLOWED_HOSTS: "*"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    command:
+      - sh
+      - -c
+      - >
+        mkdir -p /mlflow/artifacts &&
+        chown -R 0:0 /mlflow &&
+        mlflow server
+        --backend-store-uri sqlite:////mlflow/mlflow.db
+        --default-artifact-root /mlflow/artifacts
+        --host 0.0.0.0
+        --port 5000
+        --gunicorn-opts "--forwarded-allow-ips='*' --log-level info"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  mlflow_data:

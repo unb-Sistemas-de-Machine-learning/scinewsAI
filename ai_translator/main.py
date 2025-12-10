@@ -1,11 +1,16 @@
 import sys
+import os
 import argparse
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from src.ingest import ingest_paper
-from src.rag import query_rag
+from src.rag import query_rag, query_rag_with_context
+from src.tracking import setup_mlflow, log_common_params
+from src.metrics import log_basic_metrics, maybe_load_reference
+import mlflow
 
 def main():
     parser = argparse.ArgumentParser(description="AI Translator & Summarizer for Scientific Papers")
@@ -19,18 +24,50 @@ def main():
     args = parser.parse_args()
     
     if args.command == "file":
+        tracking_enabled = setup_mlflow()
+        run_active = False
         try:
-            from src.ingest import ingest_paper
-            result = ingest_paper(args.file_path)
-            print(result)
+            run_name = f"file:{os.path.basename(args.file_path)}"
+            if tracking_enabled:
+                mlflow.start_run(run_name=run_name)
+                run_active = True
+                log_common_params({"input_source": "file"})
+                mlflow.log_param("input_file", args.file_path)
+
+            ingest_meta = ingest_paper(args.file_path)
+            print(f"Inserido com sucesso {ingest_meta['file_path']} com {ingest_meta['chunks']} chunks.")
+
+            if tracking_enabled:
+                mlflow.log_metrics({
+                    "pages": ingest_meta["pages"],
+                    "chunks": ingest_meta["chunks"],
+                    "ingest_time_s": ingest_meta["ingest_time_s"],
+                    "split_time_s": ingest_meta["split_time_s"],
+                })
+
+            rag_start = time.time()
             print("Processando consulta...")
-            answer = query_rag()
+            rag_result = query_rag_with_context()
+            answer = rag_result["answer"]
+            contexts = rag_result["contexts"]
+            rag_time = time.time() - rag_start
+
             print("\n=== Resposta ===\n")
             print(answer)
             print("\n=============\n")
+
+            if tracking_enabled:
+                mlflow.log_metric("rag_time_s", rag_time)
+                mlflow.log_text(answer, "summary.md")
+                ref_path = os.getenv("REFERENCE_SUMMARY_PATH")
+                reference = maybe_load_reference(ref_path)
+                log_basic_metrics(answer, contexts, reference)
         except Exception as e:
             print(f"Erro durante o processamento: {e}")
             sys.exit(1)
+        finally:
+            if run_active:
+                mlflow.end_run()
             
     elif args.command == "db":
         try:

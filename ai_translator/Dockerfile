@@ -15,7 +15,7 @@ FROM python:3.11-slim AS runner
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y build-essential curl libpq-dev
+RUN apt-get update && apt-get install -y build-essential curl libpq-dev git
 
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
