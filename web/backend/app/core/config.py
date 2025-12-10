@@ -14,9 +14,6 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@db:5432/scinewsai"
     
-    # Redis
-    REDIS_URL: str = "redis://redis:6379/0"
-    
     # Security
     SECRET_KEY: str = "your-super-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
