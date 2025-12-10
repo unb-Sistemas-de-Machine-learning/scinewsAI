@@ -1,0 +1,53 @@
+name: Scinews ETL Pipeline
+
+on:
+  schedule:
+    # Roda toda segunda-feira às 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # ETAPA 1: SCRAPER (paper_scraper)
+      - name: Install Scraper Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r paper_scraper/requirements.txt
+
+      - name: Run Scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Inclua aqui se o scraper usar:
+          S2_API_KEY: ${{ secrets.S2_API_KEY }} 
+        run: |
+          cd paper_scraper
+          python main.py
+
+      # ETAPA 2: AI TRANSLATOR / PROCESSOR
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install Translator Dependencies
+        working-directory: ./ai_translator
+        # Instala dependências do pyproject.toml
+        run: poetry install --no-interaction --no-root
+
+      - name: Run AI Processing (Translation & RAG)
+        working-directory: ./ai_translator
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: openai
+        run: poetry run python main.py db
+        
