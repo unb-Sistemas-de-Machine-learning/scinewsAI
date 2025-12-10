@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS articles (
     original_pdf_path TEXT,
     processing_status VARCHAR(50) DEFAULT 'pending',
     simplified_text TEXT,
+    notification_sent BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     relevance_score FLOAT DEFAULT 0.0
 );

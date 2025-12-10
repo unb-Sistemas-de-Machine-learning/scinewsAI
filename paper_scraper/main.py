@@ -216,7 +216,7 @@ def main():
     if mode == "auto":
         print("Starting Paper Scraper in AUTOMATED mode (Daily at 08:00).")
         # Schedule the job
-        schedule.every().day.at("08:00").do(job)
+        schedule.every().day.at("11:07").do(job)
         
         # Run once immediately on start for testing/verification purpose? 
         # Or maybe check if it's the first run. For now, let's just schedule.

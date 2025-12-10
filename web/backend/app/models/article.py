@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Date, DateTime, ARRAY
+from sqlalchemy import Column, String, Text, Date, DateTime, ARRAY, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
@@ -20,4 +20,5 @@ class Article(Base):
     original_pdf_path = Column(Text, nullable=True)
     processing_status = Column(String(50), default="pending")
     simplified_text = Column(Text, nullable=True)
+    notification_sent = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)

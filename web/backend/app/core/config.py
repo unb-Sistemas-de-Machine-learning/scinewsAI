@@ -31,11 +31,11 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     
     # Email Configuration
-    SMTP_HOST: str = ""
+    SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
-    EMAIL_FROM: str = "noreply@scinewsai.com"
+    SMTP_USER: str = "bruno.martval@gmail.com"
+    SMTP_PASSWORD: str = "ijwj bynm wbpn ogov"
+    EMAIL_FROM: str = "bruno.martval@gmail.com"
     
     class Config:
         env_file = ".env"

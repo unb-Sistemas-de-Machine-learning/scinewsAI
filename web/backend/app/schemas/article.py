@@ -23,6 +23,7 @@ class ArticleResponse(BaseModel):
     source_url: Optional[str]
     processing_status: str
     simplified_text: Optional[str]
+    notification_sent: bool
     created_at: datetime
 
     class Config:
