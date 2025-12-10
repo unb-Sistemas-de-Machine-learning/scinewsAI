@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS articles (
     original_pdf_path TEXT,
     processing_status VARCHAR(50) DEFAULT 'pending',
     simplified_text TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    relevance_score FLOAT DEFAULT 0.0
 );
 
 CREATE INDEX idx_articles_status ON articles(processing_status);

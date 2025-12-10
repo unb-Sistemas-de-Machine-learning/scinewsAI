@@ -1,15 +1,18 @@
 services:
-
   db:
     image: postgres:15-alpine
+    container_name: scinewsai-db
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: scinews
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: scinewsai
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./web/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d scinews"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,7 +27,7 @@ services:
     env_file:
       - ./ai_translator/.env
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/scinews
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/scinewsai
       - LLM_PROVIDER=openai
     depends_on:
       db:
@@ -47,6 +50,44 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./web/backend
+      dockerfile: Dockerfile
+    container_name: scinewsai-backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/scinewsai
+      - DEBUG=true
+      - SECRET_KEY=dev-secret-key-change-in-production
+      # - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./web/backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      # redis:
+      #   condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # React Frontend (for local development)
+  frontend:
+    build:
+      context: ./web/frontend
+      dockerfile: Dockerfile.dev
+    container_name: scinewsai-frontend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
