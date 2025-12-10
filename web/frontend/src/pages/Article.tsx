@@ -5,6 +5,7 @@ import { articlesApi } from '@/lib/apiService';
 import { Article as ArticleType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { LikeButton } from '@/components/articles/LikeButton';
+import { renderMarkdown } from '@/lib/markdownParser';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -181,56 +182,8 @@ export default function Article() {
                 Explicação Simplificada
               </h2>
             </div>
-            <div className="article-prose prose prose-lg max-w-none text-foreground">
-              {article.simplified_text.split('\n').map((paragraph, index) => {
-                if (paragraph.startsWith('## ')) {
-                  return (
-                    <h2 key={index} className="font-serif text-xl font-semibold mt-8 mb-4 text-foreground">
-                      {paragraph.replace('## ', '')}
-                    </h2>
-                  );
-                }
-                if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                  return (
-                    <p key={index} className="font-semibold text-foreground">
-                      {paragraph.replace(/\*\*/g, '')}
-                    </p>
-                  );
-                }
-                if (paragraph.startsWith('- ')) {
-                  return (
-                    <li key={index} className="ml-4 text-foreground/90">
-                      {paragraph.replace('- ', '')}
-                    </li>
-                  );
-                }
-                if (paragraph.match(/^\d+\./)) {
-                  return (
-                    <li key={index} className="ml-4 list-decimal text-foreground/90">
-                      {paragraph.replace(/^\d+\.\s*/, '')}
-                    </li>
-                  );
-                }
-                if (paragraph.trim()) {
-                  // Handle inline bold text
-                  const parts = paragraph.split(/(\*\*[^*]+\*\*)/);
-                  return (
-                    <p key={index} className="text-foreground/90">
-                      {parts.map((part, i) => {
-                        if (part.startsWith('**') && part.endsWith('**')) {
-                          return (
-                            <strong key={i} className="text-foreground font-semibold">
-                              {part.replace(/\*\*/g, '')}
-                            </strong>
-                          );
-                        }
-                        return part;
-                      })}
-                    </p>
-                  );
-                }
-                return null;
-              })}
+            <div className="space-y-4">
+              {renderMarkdown(article.simplified_text)}
             </div>
           </section>
         )}
