@@ -1,14 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from uuid import UUID
 
-from app.db.database import get_db
-from app.models.like import Like
-from app.models.user import User
+from app.db.supabase import get_supabase
 from app.schemas.like import LikeResponse, LikeCountResponse
 from app.core.security import get_current_user
-from sqlalchemy import func
-
+from uuid import uuid4
+from datetime import datetime
 
 router = APIRouter()
 
@@ -16,111 +12,113 @@ router = APIRouter()
 @router.post("/articles/{article_id}/like/", response_model=LikeResponse)
 async def like_article(
     article_id: str,
-    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Like an article"""
-    # Extract user_id from current_user dict
+    supabase = get_supabase()
     user_id = current_user.get("user_id") or current_user.get("id")
     
-    # Check if article exists
-    from app.models.article import Article
-    article = db.query(Article).filter(Article.id == article_id).first()
-    if not article:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Artigo não encontrado"
-        )
-    
-    # Check if user already liked the article
-    existing_like = db.query(Like).filter(
-        Like.user_id == user_id,
-        Like.article_id == article_id
-    ).first()
-    
-    if existing_like:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Você já curtiu este artigo"
-        )
-    
-    # Create like
-    like = Like(
-        user_id=user_id,
-        article_id=article_id
-    )
-    db.add(like)
-    db.commit()
-    db.refresh(like)
-    
-    return like
+    try:
+        # Check if article exists
+        article = supabase.table("articles").select("id").eq("id", article_id).execute()
+        if not article.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Artigo não encontrado"
+            )
+        
+        # Check if user already liked the article
+        existing_like = supabase.table("likes").select("id").eq("user_id", user_id).eq("article_id", article_id).execute()
+        
+        if existing_like.data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Você já curtiu este artigo"
+            )
+        
+        # Create like
+        like_data = {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "article_id": article_id,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        
+        result = supabase.table("likes").insert(like_data).execute()
+        return result.data[0] if result.data else like_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to like article: {str(e)}")
 
 
 @router.delete("/articles/{article_id}/like/", status_code=status.HTTP_204_NO_CONTENT)
 async def unlike_article(
     article_id: str,
-    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Unlike an article"""
-    # Extract user_id from current_user dict
+    supabase = get_supabase()
     user_id = current_user.get("user_id") or current_user.get("id")
     
-    like = db.query(Like).filter(
-        Like.user_id == user_id,
-        Like.article_id == article_id
-    ).first()
-    
-    if not like:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Você não havia curtido este artigo"
-        )
-    
-    db.delete(like)
-    db.commit()
+    try:
+        # Find and delete the like
+        like = supabase.table("likes").select("id").eq("user_id", user_id).eq("article_id", article_id).execute()
+        
+        if not like.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Você não havia curtido este artigo"
+            )
+        
+        supabase.table("likes").delete().eq("user_id", user_id).eq("article_id", article_id).execute()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to unlike article: {str(e)}")
 
 
 @router.get("/articles/{article_id}/like-status/", response_model=LikeCountResponse)
 async def get_like_status(
     article_id: str,
-    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Get like count and user's like status for an article"""
-    # Extract user_id from current_user dict
+    supabase = get_supabase()
     user_id = current_user.get("user_id") or current_user.get("id")
     
-    # Count total likes
-    like_count = db.query(func.count(Like.id)).filter(
-        Like.article_id == article_id
-    ).scalar()
-    
-    # Check if current user liked the article
-    user_like = db.query(Like).filter(
-        Like.user_id == user_id,
-        Like.article_id == article_id
-    ).first()
-    
-    return LikeCountResponse(
-        article_id=article_id,
-        like_count=like_count or 0,
-        is_liked=user_like is not None
-    )
+    try:
+        # Count total likes
+        all_likes = supabase.table("likes").select("id", count="exact").eq("article_id", article_id).execute()
+        like_count = all_likes.count if all_likes.count else 0
+        
+        # Check if current user liked the article
+        user_like = supabase.table("likes").select("id").eq("user_id", user_id).eq("article_id", article_id).execute()
+        is_liked = bool(user_like.data)
+        
+        return LikeCountResponse(
+            article_id=article_id,
+            like_count=like_count,
+            is_liked=is_liked
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get like status: {str(e)}")
 
 
 @router.get("/articles/{article_id}/likes/", response_model=LikeCountResponse)
-async def get_like_count_public(
-    article_id: str,
-    db: Session = Depends(get_db)
-):
+async def get_like_count_public(article_id: str):
     """Get like count for an article (public endpoint)"""
-    like_count = db.query(func.count(Like.id)).filter(
-        Like.article_id == article_id
-    ).scalar()
+    supabase = get_supabase()
     
-    return LikeCountResponse(
-        article_id=article_id,
-        like_count=like_count or 0,
-        is_liked=False
-    )
+    try:
+        # Count total likes
+        all_likes = supabase.table("likes").select("id", count="exact").eq("article_id", article_id).execute()
+        like_count = all_likes.count if all_likes.count else 0
+        
+        return LikeCountResponse(
+            article_id=article_id,
+            like_count=like_count,
+            is_liked=False
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get like count: {str(e)}")

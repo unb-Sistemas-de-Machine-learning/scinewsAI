@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@db:5432/scinewsai"
     
+    # Supabase Configuration
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    USE_SUPABASE: bool = False
+    
     # Security
     SECRET_KEY: str = "your-super-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
