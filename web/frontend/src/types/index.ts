@@ -27,7 +27,6 @@ export interface Topic {
   name: string;
   description: string;
   slug: string;
-  article_count: number;
 }
 
 export type ProfileType = 'student' | 'educator' | 'enthusiast';

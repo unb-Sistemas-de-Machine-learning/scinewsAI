@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from '@/hooks/use-toast';
-import { TOPICS } from '@/data/mockData';
-import { ProfileType } from '@/types';
+import { topicsApi, usersApi } from '@/lib/apiService';
+import { Topic, ProfileType } from '@/types';
 import { 
   User, 
   GraduationCap, 
@@ -16,7 +16,8 @@ import {
   Save,
   Bell,
   Check,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 
 const profileTypes: { value: ProfileType; label: string; description: string; icon: React.ElementType }[] = [
@@ -41,53 +42,136 @@ const profileTypes: { value: ProfileType; label: string; description: string; ic
 ];
 
 export default function Profile() {
-  const { user, updateProfile, subscribeToTopic, unsubscribeFromTopic } = useAuth();
+  const { user, setUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [profileType, setProfileType] = useState<ProfileType>(user?.profile_type || 'student');
   const [isSaving, setIsSaving] = useState(false);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState(true);
+  const [togglingTopics, setTogglingTopics] = useState<Set<string>>(new Set());
 
   const subscribedTopics = user?.subscribed_topics || [];
+  const subscribedTopicObjects = topics.filter(t => subscribedTopics.includes(t.id));
+
+  useEffect(() => {
+    const loadTopics = async () => {
+      try {
+        setLoadingTopics(true);
+        const data = await topicsApi.getAll();
+        setTopics(data);
+      } catch (err) {
+        console.error('Error loading topics:', err);
+        toast({
+          title: 'Erro',
+          description: 'Falha ao carregar tópicos.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoadingTopics(false);
+      }
+    };
+
+    loadTopics();
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    updateProfile({ name, profile_type: profileType });
-    toast({
-      title: 'Perfil atualizado',
-      description: 'Suas alterações foram salvas.',
-    });
-    setIsSaving(false);
+    try {
+      await usersApi.update(user?.id || '', { name, profile_type: profileType });
+      setUser({ ...user!, name, profile_type: profileType });
+      toast({
+        title: 'Perfil atualizado',
+        description: 'Suas alterações foram salvas.',
+      });
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao atualizar perfil.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleTopicToggle = (topicId: string) => {
-    if (subscribedTopics.includes(topicId)) {
-      unsubscribeFromTopic(topicId);
-    } else {
-      subscribeToTopic(topicId);
+  const handleTopicToggle = async (topicId: string, topicName: string) => {
+    const isSubscribed = subscribedTopics.includes(topicId);
+    
+    try {
+      setTogglingTopics((prev) => new Set(prev).add(topicId));
+      
+      let updatedUser;
+      if (isSubscribed) {
+        updatedUser = await usersApi.unsubscribeTopic(topicId);
+        toast({
+          title: 'Desinscrito!',
+          description: `Você se desinscreveu de ${topicName}`,
+        });
+      } else {
+        updatedUser = await usersApi.subscribeTopic(topicId);
+        toast({
+          title: 'Inscrito!',
+          description: `Você agora receberá atualizações sobre ${topicName}`,
+        });
+      }
+      
+      setUser(updatedUser);
+    } catch (err: any) {
+      console.error('Error toggling topic subscription:', err);
+      
+      // If already subscribed error, just update the user state
+      if (err?.response?.status === 400 && err?.response?.data?.detail === "Already subscribed to this topic") {
+        try {
+          const currentUser = await usersApi.getCurrentUser();
+          setUser(currentUser);
+          toast({
+            title: 'Já inscrito',
+            description: 'Você já está inscrito neste tópico.',
+          });
+        } catch (refreshErr) {
+          console.error('Error refreshing user:', refreshErr);
+        }
+      } else {
+        toast({
+          title: 'Erro',
+          description: 'Falha ao atualizar inscrição.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setTogglingTopics((prev) => {
+        const updated = new Set(prev);
+        updated.delete(topicId);
+        return updated;
+      });
     }
   };
 
   return (
     <Layout>
       <div className="container py-8 lg:py-12">
-        <div className="max-w-2xl">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-accent" />
-            </div>
-            <div>
-              <h1 className="font-serif text-2xl font-bold text-foreground">
-                Configurações de Perfil
-              </h1>
-              <p className="text-muted-foreground">
-                Gerencie sua conta e preferências
-              </p>
-            </div>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+            <User className="h-6 w-6 text-accent" />
           </div>
+          <div>
+            <h1 className="font-serif text-2xl font-bold text-foreground">
+              Configurações de Perfil
+            </h1>
+            <p className="text-muted-foreground">
+              Gerencie sua conta e preferências
+            </p>
+          </div>
+        </div>
 
-          {/* Profile Form */}
-          <div className="scholarly-card p-6 mb-8">
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Column - Profile Form */}
+          <div>
+            {/* Profile Form */}
+            <div className="scholarly-card p-6">
             <h2 className="font-serif text-lg font-semibold mb-6">
               Informações Pessoais
             </h2>
@@ -157,56 +241,69 @@ export default function Profile() {
                 {isSaving ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
             </div>
+            </div>
           </div>
 
-          {/* Topic Subscriptions */}
-          <div className="scholarly-card p-6">
+          {/* Right Column - Topic Subscriptions */}
+          <div>
+            {/* Topic Subscriptions */}
+            <div className="scholarly-card p-6">
             <div className="flex items-center gap-2 mb-6">
               <Bell className="h-5 w-5 text-accent" />
               <h2 className="font-serif text-lg font-semibold">
-                Inscrições em Tópicos
+                Seus Tópicos Inscritos
               </h2>
             </div>
             <p className="text-sm text-muted-foreground mb-6">
-              Gerencie suas inscrições em tópicos. Você receberá newsletters semanais
+              Tópicos nos quais você está inscrito. Você receberá newsletters semanais
               sobre esses tópicos.
             </p>
 
-            <div className="space-y-2">
-              {TOPICS.map((topic) => {
-                const isSubscribed = subscribedTopics.includes(topic.id);
-                return (
-                  <button
-                    key={topic.id}
-                    onClick={() => handleTopicToggle(topic.id)}
-                    className={`w-full flex items-center justify-between p-4 rounded-lg border transition-colors text-left ${
-                      isSubscribed
-                        ? 'border-accent bg-accent/5'
-                        : 'border-border hover:border-muted-foreground/30'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-medium text-sm">{topic.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {topic.article_count} artigos
-                      </div>
-                    </div>
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                        isSubscribed
-                          ? 'bg-accent text-accent-foreground'
-                          : 'bg-muted text-muted-foreground'
+            {loadingTopics ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-accent" />
+              </div>
+            ) : subscribedTopicObjects.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  Você não está inscrito em nenhum tópico ainda.
+                </p>
+                <Button variant="scholarly" asChild>
+                  <a href="/topics">Explorar Tópicos</a>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {subscribedTopicObjects.map((topic) => {
+                  const isToggling = togglingTopics.has(topic.id);
+                  return (
+                    <button
+                      key={topic.id}
+                      onClick={() => handleTopicToggle(topic.id, topic.name)}
+                      disabled={isToggling}
+                      className={`w-full flex items-center justify-between p-4 rounded-lg border transition-colors text-left disabled:opacity-50 ${
+                        'border-accent bg-accent/5'
                       }`}
                     >
-                      {isSubscribed ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <X className="h-3 w-3" />
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
+                      <div>
+                        <div className="font-medium text-sm">{topic.name}</div>
+                      </div>
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                          isToggling ? '' : 'bg-accent text-accent-foreground'
+                        }`}
+                      >
+                        {isToggling ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             </div>
           </div>
         </div>

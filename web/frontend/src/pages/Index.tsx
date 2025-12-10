@@ -12,8 +12,6 @@ import {
   Shield,
   Clock
 } from 'lucide-react';
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const features = [
   {
@@ -46,13 +44,6 @@ const features = [
 
 export default function Index() {
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, navigate]);
 
   return (
     <Layout>

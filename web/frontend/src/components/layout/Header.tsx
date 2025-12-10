@@ -55,7 +55,7 @@ export function Header() {
               </span>
               <Button variant="ghost" size="sm" onClick={logout}>
                 <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                Sair
               </Button>
             </div>
           ) : (

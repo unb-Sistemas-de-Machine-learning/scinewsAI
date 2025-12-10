@@ -63,18 +63,19 @@ export default function Auth() {
     profileType: 'student' as ProfileType,
   });
 
-  const { login, signup, isAuthenticated } = useAuth();
+  const { login, signup, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     setIsLogin(mode === 'login');
   }, [mode]);
 
+  // Redirect to dashboard if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    if (isAuthenticated && !authLoading) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

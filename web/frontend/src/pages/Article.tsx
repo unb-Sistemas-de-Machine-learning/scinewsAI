@@ -1,6 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { MOCK_ARTICLES } from '@/data/mockData';
+import { articlesApi } from '@/lib/apiService';
+import { Article as ArticleType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
@@ -9,22 +11,60 @@ import {
   ExternalLink, 
   Tag,
   Share2,
-  Bookmark
+  Bookmark,
+  Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
 export default function Article() {
   const { id } = useParams<{ id: string }>();
-  const article = MOCK_ARTICLES.find((a) => a.id === id);
+  const [article, setArticle] = useState<ArticleType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!article) {
+  useEffect(() => {
+    const loadArticle = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const data = await articlesApi.getById(id);
+        setArticle(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading article:', err);
+        setError('Erro ao carregar artigo. Tente novamente.');
+        toast({
+          title: 'Erro',
+          description: 'Falha ao carregar artigo.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadArticle();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container py-16 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !article) {
     return (
       <Layout>
         <div className="container py-16 text-center">
           <h1 className="font-serif text-2xl font-bold mb-4">Artigo não encontrado</h1>
           <p className="text-muted-foreground mb-8">
-            O artigo que você está procurando não existe.
+            {error || 'O artigo que você está procurando não existe.'}
           </p>
           <Button variant="scholarly" asChild>
             <Link to="/dashboard">Voltar para artigos</Link>
@@ -73,7 +113,7 @@ export default function Article() {
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-                {format(new Date(article.publication_date), 'dd/MM/yyyy')}
+              {format(new Date(article.publication_date), 'dd/MM/yyyy')}
             </span>
             <span className="flex items-center gap-1">
               <Users className="h-4 w-4" />

@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Clean npm cache and remove node_modules if exists
+RUN npm cache clean --force && rm -rf node_modules
+
 # Install dependencies
 RUN npm install
 
