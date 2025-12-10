@@ -20,7 +20,7 @@ async def list_articles(
     current_user: dict = Depends(get_current_user),
 ):
     """List all articles with pagination and filtering"""
-    query = db.query(Article).filter(Article.processing_status == "completed")
+    query = db.query(Article).filter(Article.processing_status == "translated")
     
     if search:
         search_filter = f"%{search}%"
