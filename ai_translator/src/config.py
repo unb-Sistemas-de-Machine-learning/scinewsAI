@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     CHROMA_PERSIST_DIRECTORY: str = "./chroma_db"
     OPENAI_MODEL: str = "gpt-4o"
     ANTHROPIC_MODEL: str = "claude-3-opus-20240229"
+    DATABASE_URL: Optional[str] = None
     
     model_config = SettingsConfigDict(
         env_file=".env", 

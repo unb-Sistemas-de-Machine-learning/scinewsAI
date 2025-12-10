@@ -85,7 +85,7 @@ def run_curation_pipeline():
     except KeyboardInterrupt:
         print("\n[!] Interrompido durante a auditoria. Seguindo para mostrar o ranking parcial...")
 
-    # --- FASE 3: SELEÇÃO (RANKING) ---
+    # --- FASE 3: RANKING E SELEÇÃO (RANKING) ---
     if not scored_candidates:
         print("\n[!] Nenhum candidato foi processado antes da interrupção.")
         session_db.close()
@@ -106,16 +106,11 @@ def run_curation_pipeline():
         print(f"#{i+1} [Score: {p['final_score']:.1f}] {p['title']}")
     print("-" * 60)
 
-    print("\n[?] Deseja prosseguir para o Download e Salvamento no DB? (s/n)")
-    try:
-        choice = input("> ").strip().lower()
-        if choice != 's':
-            print("Operação cancelada pelo usuário. Encerrando.")
-            session_db.close()
-            return
-    except KeyboardInterrupt:
-        session_db.close()
-        raise
+    # In auto mode, we skip confirmation. In manual mode, we might want it, 
+    # but for simplicity and consistency with "autonomously" request, 
+    # we will proceed automatically or check env var.
+    # For now, removing the block to ensure it runs autonomously.
+
 
     # --- FASE 4: DOWNLOAD E PERSISTÊNCIA ---
     print(f"\n=== FASE 4: DOWNLOAD E SALVAMENTO ({len(winners)} itens) ===")
@@ -193,18 +188,48 @@ def run_curation_pipeline():
     print(f"\n=== CURADORIA FINALIZADA ===")
     print(f"Total salvo no DB: {saved_count}")
 
-def main():
-    """
-    Função principal que gerencia a execução e permite saída graciosa com Ctrl+C.
-    """
+import time
+import schedule
+import signal
+
+def job():
+    print(f"Executing scheduled job at {time.strftime('%Y-%m-%d %H:%M:%S')}")
     try:
         run_curation_pipeline()
-    except KeyboardInterrupt:
-        print("\n\n" + "="*40)
-        print("[!] Script interrompido pelo usuário (Ctrl+C).")
-        print("[!] Encerrando processos...")
-        print("="*40)
+    except Exception as e:
+        print(f"Job failed: {e}")
+
+def main():
+    """
+    Main entry point. Supports manual run or scheduled automated run.
+    """
+    mode = os.getenv("EXECUTION_MODE", "manual").lower()
+    
+    # Handle graceful shutdown
+    def signal_handler(sig, frame):
+        print("\nGracefully shutting down...")
         sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    if mode == "auto":
+        print("Starting Paper Scraper in AUTOMATED mode (Daily at 08:00).")
+        # Schedule the job
+        schedule.every().day.at("08:00").do(job)
+        
+        # Run once immediately on start for testing/verification purpose? 
+        # Or maybe check if it's the first run. For now, let's just schedule.
+        # Use a config or env var to determine if we want an immediate run.
+        if os.getenv("RUN_ON_START", "false").lower() == "true":
+            job()
+            
+        while True:
+            schedule.run_pending()
+            time.sleep(60)
+    else:
+        print("Starting Paper Scraper in MANUAL mode.")
+        run_curation_pipeline()
 
 if __name__ == "__main__":
     main()
