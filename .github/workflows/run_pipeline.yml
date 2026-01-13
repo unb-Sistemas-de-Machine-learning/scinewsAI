@@ -1,9 +1,9 @@
 name: Scinews ETL Pipeline
 
 on:
-  schedule:
-    # Roda toda segunda-feira às 09:00 UTC
-    - cron: '0 9 * * 1'
+  # schedule:
+  #   # Roda toda segunda-feira às 09:00 UTC
+  #   - cron: '0 9 * * 1'
   workflow_dispatch:
 
 jobs:
